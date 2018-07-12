@@ -84,8 +84,12 @@ async def download_url(q):
                 continue
 
             try:
-                async with session.get(url, timeout=5) as resp:
+                async with session.get(url, timeout=10) as resp:
                     content = await resp.read()
+                    if resp.status != 200:
+                        logging.error(f'{resp.status}...{url}')
+                        continue
+
                     # 判断是否获取到了正确的图片
                     if resp.content_length == 20:
                         # 获取的数据为空
@@ -103,13 +107,13 @@ async def download_url(q):
                         q.task_done()
 
             except UnicodeDecodeError:
-                logging.error('UnicodeDecodeError')
+                logging.error(f'UnicodeDecodeError...{url}')
 
             except aiohttp.client_exceptions.ClientConnectorError:
-                logging.error('ClientConnectorError')
+                logging.error(f'ClientConnectorError...{url}')
 
             except asyncio.TimeoutError:
-                logging.error('TimeoutError')
+                logging.error(f'TimeoutError...{url}')
 
 
 async def put_in_queue(q, download_image_url):
@@ -167,16 +171,6 @@ async def run(q, loop):
     tasks_download = [loop.create_task(download_url(q)) for _ in range(COROUTINE_NUMBER)]
 
     await asyncio.wait(tasks + tasks_download)
-
-
-# def parse_argv() -> argparse.Namespace:
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('keyword', type=str, help='search keyword like "model"')
-#     parser.add_argument('-w', '--width', type=int, help='the picture width')
-#     parser.add_argument('-he', '--height', type=int, help='the picture height')
-#     args = parser.parse_args()
-#     logging.info(args)
-#     return args
 
 
 if __name__ == '__main__':
