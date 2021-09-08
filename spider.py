@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin python
 # -*- coding: utf-8 -*-
 
 # @author: x.huang
@@ -39,7 +39,7 @@ HEIGHT = argv.height
 
 event = asyncio.Event()
 
-BD_DOWNLOAD_URL_PREFIX = 'http://image.baidu.com/search/down' \
+BD_DOWNLOAD_URL_PREFIX = 'https://image.baidu.com/search/down' \
                          '?tn=download&ipn=dwnl&word=download&ie=utf8&fr=result' \
                          '&url='
 
@@ -131,24 +131,35 @@ async def get_json_result(q):
     height = HEIGHT or 0
     key_word = quote(key_word_o)
 
-    async with aiohttp.ClientSession() as session:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"
+        }
+
+    async with aiohttp.ClientSession(headers=headers) as session:
         # 百度搜索出来的图片做多能访问到接近2000张
         for num in range(0, 2000, 60):
             try:
-                baidu_url = 'https://image.baidu.com/search/flip' \
-                            '?tn=baiduimage&ie=utf-8&word={key_word}&pn={num}&width={width}&height={height}'
+                baidu_url = 'https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&word={key_word}&ie=utf-8&width={width}&height={height}&pn={num}'
+                # baidu_url = 'https://image.baidu.com/search/flip' \
+                #             '?tn=baiduimage&ie=utf-8&word={key_word}&pn={num}&width={width}&height={height}'
                 request_url = baidu_url.format(num=num, key_word=key_word, width=width, height=height)
+                logging.info("request_url: %s", request_url)
                 async with session.get(request_url, timeout=10) as resp:
                     content = await resp.read()
                     content = content.decode('utf-8')
-                    reg = re.compile(r'"objURL":"(.*?)"')
+                    reg = re.compile(r'"ObjURL":"(.*?)"')
                     # reg = re.compile(r'class="down".*href="(.*?)"')
                     image_data_list = re.findall(reg, content)
-
+                    logging.info(image_data_list)
+                    if not image_data_list:
+                        continue
                     for image_url in image_data_list:
-                        if image_url.endswith('jpg'):
+                        if image_url.startswith('http'):
+                            image_url = image_url.replace("\/", "/")
+                            image_url = quote(image_url)
                             download_image_url = BD_DOWNLOAD_URL_PREFIX + image_url
-
+                
+                            logging.info("download_image_url: %s", download_image_url)
                             await put_in_queue(q, download_image_url)
 
                 logging.info(f'done...{request_url}')
@@ -158,6 +169,7 @@ async def get_json_result(q):
 
             except aiohttp.client_exceptions.ClientConnectorError:
                 logging.error('ClientConnectorError')
+
 
     # 结束信号
     event.set()
