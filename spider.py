@@ -20,7 +20,7 @@ import aiohttp
 
 logging.basicConfig(level=logging.INFO)
 
-DEFAULT_IMAGE_DIR = '/var/image_data/aio_queue'
+DEFAULT_IMAGE_DIR = './download'
 DEFAULT_COROUTINE_NUMBER = 30  # 协程数
 
 parser = argparse.ArgumentParser()
