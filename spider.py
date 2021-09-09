@@ -25,8 +25,9 @@ DEFAULT_COROUTINE_NUMBER = 30  # 协程数
 
 parser = argparse.ArgumentParser()
 parser.add_argument('keyword', type=str, help='search keyword like "model"')
-parser.add_argument('-d', help='图片下载目录', type=str, dest='dir')
-parser.add_argument('-n', help='协程数', type=int, dest='coroutine_number')
+parser.add_argument('-d', '--dir', help='图片下载目录', type=str, dest='dir')
+parser.add_argument('-n', '--coroutine_number', help='协程数',
+                    type=int, dest='coroutine_number')
 parser.add_argument('-w', '--width', type=int, help='the picture width')
 parser.add_argument('-he', '--height', type=int, help='the picture height')
 argv = parser.parse_args()
@@ -103,7 +104,8 @@ async def download_url(q):
                     async with aiofiles.open(file_path, 'wb+') as f:
                         await f.write(content)
                         now = time.time()
-                        logging.info(f'ok ... {file_path}... {now}...queue.size: {q.qsize()}')
+                        logging.info(
+                            f'ok ... {file_path}... {now}...queue.size: {q.qsize()}')
                         q.task_done()
 
             except UnicodeDecodeError:
@@ -133,7 +135,7 @@ async def get_json_result(q):
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"
-        }
+    }
 
     async with aiohttp.ClientSession(headers=headers) as session:
         # 百度搜索出来的图片做多能访问到接近2000张
@@ -142,7 +144,8 @@ async def get_json_result(q):
                 baidu_url = 'https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&word={key_word}&ie=utf-8&width={width}&height={height}&pn={num}'
                 # baidu_url = 'https://image.baidu.com/search/flip' \
                 #             '?tn=baiduimage&ie=utf-8&word={key_word}&pn={num}&width={width}&height={height}'
-                request_url = baidu_url.format(num=num, key_word=key_word, width=width, height=height)
+                request_url = baidu_url.format(
+                    num=num, key_word=key_word, width=width, height=height)
                 logging.info("request_url: %s", request_url)
                 async with session.get(request_url, timeout=10) as resp:
                     content = await resp.read()
@@ -158,8 +161,9 @@ async def get_json_result(q):
                             image_url = image_url.replace("\/", "/")
                             image_url = quote(image_url)
                             download_image_url = BD_DOWNLOAD_URL_PREFIX + image_url
-                
-                            logging.info("download_image_url: %s", download_image_url)
+
+                            logging.info("download_image_url: %s",
+                                         download_image_url)
                             await put_in_queue(q, download_image_url)
 
                 logging.info(f'done...{request_url}')
@@ -170,7 +174,6 @@ async def get_json_result(q):
             except aiohttp.client_exceptions.ClientConnectorError:
                 logging.error('ClientConnectorError')
 
-
     # 结束信号
     event.set()
 
@@ -180,7 +183,8 @@ async def run(q, loop):
 
     tasks = [loop.create_task(get_json_result(q))]
 
-    tasks_download = [loop.create_task(download_url(q)) for _ in range(COROUTINE_NUMBER)]
+    tasks_download = [loop.create_task(download_url(q))
+                      for _ in range(COROUTINE_NUMBER)]
 
     await asyncio.wait(tasks + tasks_download)
 
